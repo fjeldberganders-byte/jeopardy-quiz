@@ -194,7 +194,21 @@ h1{font-family:'Oswald',sans-serif;font-size:clamp(1.6rem,4vw,2.8rem);font-weigh
 .board.sudden-death-board .cell{min-height:160px;border-color:rgba(239,83,80,.3)}
 .board.sudden-death-board .cell:hover:not(.answered){background:#b71c1c;border-color:#ef5350}
 .board.sudden-death-board .cell-points{font-size:2.5rem;color:#ef9a99}
+
+/* ---- QR MODAL ---- */
+.qr-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;align-items:center;justify-content:center;padding:20px}
+.qr-overlay.active{display:flex}
+.qr-card{background:linear-gradient(160deg,#1a3aad,#040d2e);border:3px solid var(--gold);border-radius:16px;padding:30px 28px;max-width:380px;width:100%;box-shadow:0 0 60px rgba(245,197,24,.25);text-align:center;animation:popIn .22s cubic-bezier(.34,1.56,.64,1)}
+.qr-card h3{font-family:'Oswald',sans-serif;font-size:1.3rem;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:6px}
+.qr-card p{font-size:.82rem;color:rgba(255,255,255,.45);margin-bottom:22px}
+#qr-canvas{display:flex;justify-content:center;margin-bottom:20px}
+#qr-canvas canvas,#qr-canvas img{border-radius:8px;border:4px solid #fff}
+.qr-url{font-size:.72rem;color:rgba(255,255,255,.35);word-break:break-all;margin-bottom:20px;padding:8px 12px;background:rgba(0,0,0,.3);border-radius:6px;font-family:monospace}
+.qr-close{font-family:'Oswald',sans-serif;font-size:.88rem;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:rgba(255,255,255,.5);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;padding:9px 24px;cursor:pointer;transition:background .15s}
+.qr-close:hover{background:rgba(255,255,255,.1);color:#fff}
+#qr-btn{display:none}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <!-- SPLASH SCREEN -->
@@ -234,6 +248,7 @@ h1{font-family:'Oswald',sans-serif;font-size:clamp(1.6rem,4vw,2.8rem);font-weigh
   <label>Firebase URL:</label>
   <input id="fb-url" type="text" placeholder="https://ditt-prosjekt-default-rtdb.firebaseio.com" />
   <button onclick="connectFirebase()">Koble til</button>
+  <button id="qr-btn" onclick="showQR()">📱 QR-kode</button>
 </div>
 
 <!-- BUZZ ALERT -->
@@ -667,6 +682,7 @@ function setConnState(state, label) {
   const lbl = document.getElementById('conn-label');
   dot.className = 'conn-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
   lbl.textContent = label;
+  document.getElementById('qr-btn').style.display = state === 'ok' ? 'inline-block' : 'none';
 }
 
 function listenBuzz() {
@@ -1042,6 +1058,37 @@ document.addEventListener('keydown', e => {
 });
 
 initSplash();
+
+/* ---------- QR Code ---------- */
+function showQR() {
+  if (!db) return;
+  const buzzerUrl = window.location.href.replace(/\/[^\/]*$/, '/jeopardy-buzzer.html') + '?db=' + encodeURIComponent(db);
+  const container = document.getElementById('qr-canvas');
+  container.innerHTML = '';
+  new QRCode(container, {
+    text: buzzerUrl,
+    width: 256,
+    height: 256,
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  document.getElementById('qr-url-text').textContent = buzzerUrl;
+  document.getElementById('qr-overlay').classList.add('active');
+}
+
+function closeQR() {
+  document.getElementById('qr-overlay').classList.remove('active');
+}
 </script>
+
+<!-- QR MODAL -->
+<div class="qr-overlay" id="qr-overlay" onclick="if(event.target===this)closeQR()">
+  <div class="qr-card">
+    <h3>📱 Buzz-tilkobling</h3>
+    <p>Skann QR-koden for å koble til som buzzer</p>
+    <div id="qr-canvas"></div>
+    <div class="qr-url" id="qr-url-text"></div>
+    <button class="qr-close" onclick="closeQR()">Lukk</button>
+  </div>
+</div>
 </body>
 </html>

@@ -197,6 +197,16 @@ let polling = null;
 let lastBuzz = null;
 let canBuzz = true;
 
+
+/* ---- Auto-fill Firebase URL from ?db= param ---- */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const dbParam = params.get('db');
+  if (dbParam) {
+    const input = document.getElementById('fb-url');
+    if (input) { input.value = dbParam; setup(); }
+  }
+})();
 /* ---- Setup ---- */
 function setup() {
   const url = document.getElementById('fb-url').value.trim().replace(/\/$/, '');
