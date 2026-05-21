@@ -1,0 +1,1047 @@
+﻿<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeopardy – Quizmaster</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue-dark:#040d2e;
+  --blue-mid:#1a3aad;
+  --blue-bright:#2855e0;
+  --gold:#f5c518;
+  --gold-dark:#c9a20a;
+  --green:#1b5e20;
+  --green-bright:#4caf50;
+  --red-dark:#7f0000;
+  --red-bright:#ef5350;
+  --shadow:0 4px 20px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Barlow',sans-serif;background:radial-gradient(ellipse at top,#0a1f6e 0%,#040d2e 60%);min-height:100vh;color:#fff;padding:16px}
+
+/* ---- HEADER ---- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+h1{font-family:'Oswald',sans-serif;font-size:clamp(1.6rem,4vw,2.8rem);font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;text-shadow:0 0 30px rgba(245,197,24,.4),2px 2px 0 #000}
+.round-badge{display:none;font-family:'Oswald',sans-serif;font-size:.9rem;letter-spacing:.12em;padding:6px 16px;border:2px solid var(--gold);border-radius:20px;color:var(--gold);text-transform:uppercase;white-space:nowrap}
+
+/* ---- FIREBASE CONFIG ---- */
+.firebase-bar{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.firebase-bar label{font-size:.8rem;color:rgba(255,255,255,.6);white-space:nowrap}
+.firebase-bar input{flex:1;min-width:180px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:.85rem;padding:6px 10px}
+.firebase-bar button{font-family:'Oswald',sans-serif;font-size:.85rem;padding:7px 16px;border-radius:7px;border:none;background:var(--gold);color:#000;cursor:pointer;white-space:nowrap}
+.conn-dot{width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0}
+.conn-dot.ok{background:var(--green-bright)}
+.conn-dot.err{background:var(--red-bright)}
+.conn-label{font-size:.78rem;color:rgba(255,255,255,.5)}
+
+/* ---- BUZZ ALERT (inline on board) ---- */
+.buzz-alert{display:none;background:linear-gradient(135deg,#7b1fa2,#4a148c);border:3px solid #ce93d8;border-radius:14px;padding:16px 22px;margin-bottom:16px;animation:popIn .25s cubic-bezier(.34,1.56,.64,1);position:relative}
+.buzz-alert.visible{display:block}
+.buzz-alert h3{font-family:'Oswald',sans-serif;font-size:1.1rem;color:#ce93d8;letter-spacing:.08em;margin-bottom:4px}
+.buzz-alert .buzzer-name{font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;color:#fff}
+.buzz-clear{position:absolute;top:10px;right:14px;background:transparent;border:none;color:rgba(255,255,255,.5);font-size:1.2rem;cursor:pointer}
+.buzz-clear:hover{color:#fff}
+
+/* ---- BUZZ ALERT inside modal ---- */
+.modal-buzz{display:none;background:linear-gradient(135deg,#6a0080,#38006b);border:2px solid #ce93d8;border-radius:12px;padding:14px 18px;margin-bottom:18px;position:relative;animation:buzzPop .3s cubic-bezier(.34,1.56,.64,1)}
+.modal-buzz.visible{display:block}
+@keyframes buzzPop{from{transform:scale(.9) translateY(-8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-buzz-label{font-family:'Oswald',sans-serif;font-size:.75rem;letter-spacing:.15em;color:#ce93d8;text-transform:uppercase;margin-bottom:3px}
+.modal-buzz-team{font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:700;color:#fff}
+.modal-buzz-clear{position:absolute;top:8px;right:12px;background:transparent;border:none;color:rgba(255,255,255,.45);font-size:1.1rem;cursor:pointer;line-height:1}
+.modal-buzz-clear:hover{color:#fff}
+
+/* ---- SCOREBOARD ---- */
+.scoreboard{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.team-card{background:linear-gradient(135deg,var(--blue-mid),var(--blue-dark));border:2px solid var(--gold);border-radius:12px;padding:12px 16px;min-width:150px;text-align:center;box-shadow:var(--shadow)}
+.team-name{font-family:'Oswald',sans-serif;font-size:.95rem;letter-spacing:.08em;color:var(--gold);text-transform:uppercase;margin-bottom:4px}
+.team-score{font-family:'Oswald',sans-serif;font-size:2rem;font-weight:700;color:#fff;line-height:1;margin-bottom:8px}
+.score-btns{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.score-btn{font-family:'Oswald',sans-serif;font-size:.72rem;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.07);color:#fff;border-radius:6px;padding:3px 7px;cursor:pointer;transition:background .15s,transform .1s}
+.score-btn:hover{background:rgba(255,255,255,.18)}
+.score-btn:active{transform:scale(.95)}
+.score-btn.pos{border-color:#4caf50;color:#81d985}
+.score-btn.pos:hover{background:rgba(76,175,80,.2)}
+.score-btn.neg{border-color:#ef5350;color:#ef9a99}
+.score-btn.neg:hover{background:rgba(239,83,80,.2)}
+
+/* ---- BOARD ---- */
+.board-wrapper{overflow-x:auto;padding-bottom:10px}
+.board{display:grid;gap:7px;max-width:1100px;margin:0 auto;min-width:780px}
+.category-header{background:var(--blue-mid);border:2px solid var(--gold);border-radius:8px;padding:12px 6px;text-align:center;font-family:'Oswald',sans-serif;font-size:clamp(.8rem,1.3vw,1rem);font-weight:600;text-transform:uppercase;letter-spacing:.06em;min-height:66px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.cell{background:var(--blue-mid);border:2px solid rgba(255,255,255,.13);border-radius:8px;min-height:80px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .1s,border-color .15s;box-shadow:var(--shadow)}
+.cell:hover:not(.answered){background:var(--blue-bright);border-color:var(--gold);transform:translateY(-2px)}
+.cell:active:not(.answered){transform:scale(.97)}
+.cell-points{font-family:'Oswald',sans-serif;font-size:clamp(1.3rem,2.2vw,1.8rem);font-weight:700;color:var(--gold);text-shadow:1px 1px 4px rgba(0,0,0,.6)}
+.cell.answered{background:#0d3d1a;border-color:transparent;cursor:default}
+.cell.answered .cell-points{color:#1a6b2e}
+
+/* ---- MODAL ---- */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100;align-items:center;justify-content:center;padding:20px}
+.overlay.active{display:flex}
+.modal{background:linear-gradient(160deg,#1a3aad,#040d2e);border:3px solid var(--gold);border-radius:16px;padding:32px 28px;max-width:560px;width:100%;box-shadow:0 0 60px rgba(245,197,24,.25);animation:popIn .22s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-cat{font-family:'Oswald',sans-serif;font-size:.78rem;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:4px}
+.modal-pts{font-family:'Oswald',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.5);margin-bottom:20px}
+.modal-question{font-size:clamp(1rem,2.3vw,1.4rem);font-weight:500;line-height:1.5;color:#fff;margin-bottom:24px;text-align:center}
+.reveal-btn{display:block;width:100%;font-family:'Oswald',sans-serif;font-size:1rem;letter-spacing:.08em;text-transform:uppercase;background:var(--gold);color:#000;border:none;border-radius:8px;padding:12px;cursor:pointer;transition:background .15s;margin-bottom:12px}
+.reveal-btn:hover{background:var(--gold-dark)}
+.answer-box{display:none;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:1.1rem;color:#90ee90;text-align:center;font-weight:500;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.answer-box.visible{display:block}
+.award-section{display:none}
+.award-section.visible{display:block}
+.award-label{font-family:'Oswald',sans-serif;font-size:.78rem;letter-spacing:.1em;color:rgba(255,255,255,.5);text-transform:uppercase;text-align:center;margin-bottom:8px}
+.award-btns{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.award-btn{font-family:'Oswald',sans-serif;font-size:.85rem;letter-spacing:.04em;border-radius:8px;padding:8px 12px;cursor:pointer;transition:opacity .15s,transform .1s;border:2px solid}
+.award-btn:hover{opacity:.85}
+.award-btn:active{transform:scale(.96)}
+.award-btn.correct{background:var(--green);border-color:var(--green-bright);color:#a5d6a7}
+.award-btn.wrong{background:var(--red-dark);border-color:var(--red-bright);color:#ffcdd2}
+.close-btn{display:block;width:100%;font-family:'Oswald',sans-serif;font-size:.88rem;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:rgba(255,255,255,.4);border:1.5px solid rgba(255,255,255,.18);border-radius:8px;padding:9px;cursor:pointer;transition:background .15s}
+.close-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+
+/* ---- LEADERBOARD SCREEN ---- */
+.leaderboard-screen{display:none;position:fixed;inset:0;background:radial-gradient(ellipse at center,#0a1f6e,#040d2e);z-index:200;align-items:center;justify-content:center;flex-direction:column;padding:30px;text-align:center}
+.leaderboard-screen.active{display:flex}
+.lb-title{font-family:'Oswald',sans-serif;font-size:clamp(2rem,6vw,4rem);font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.12em;text-shadow:0 0 40px rgba(245,197,24,.5);margin-bottom:8px}
+.lb-subtitle{font-size:.9rem;color:rgba(255,255,255,.45);letter-spacing:.08em;margin-bottom:40px}
+.lb-list{list-style:none;width:100%;max-width:500px;margin-bottom:40px}
+.lb-item{display:flex;align-items:center;gap:16px;padding:14px 20px;margin-bottom:10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);animation:slideIn .4s ease both}
+.lb-item:nth-child(1){background:rgba(245,197,24,.12);border-color:var(--gold)}
+.lb-item:nth-child(2){background:rgba(192,192,192,.1);border-color:silver}
+.lb-item:nth-child(3){background:rgba(205,127,50,.1);border-color:#cd7f32}
+@keyframes slideIn{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+.lb-rank{font-family:'Oswald',sans-serif;font-size:1.4rem;font-weight:700;color:var(--gold);min-width:36px;text-align:center}
+.lb-name{font-family:'Oswald',sans-serif;font-size:1.1rem;font-weight:600;flex:1;text-align:left}
+.lb-score{font-family:'Oswald',sans-serif;font-size:1.5rem;font-weight:700;color:var(--gold)}
+.lb-btn{font-family:'Oswald',sans-serif;font-size:1.1rem;letter-spacing:.1em;text-transform:uppercase;padding:14px 40px;border-radius:10px;border:none;background:var(--gold);color:#000;cursor:pointer;transition:background .15s,transform .1s;font-weight:700}
+.lb-btn:hover{background:var(--gold-dark)}
+.lb-btn:active{transform:scale(.97)}
+
+/* ---- BOTTOM ---- */
+.bottom-bar{display:flex;justify-content:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+.reset-btn{font-family:'Oswald',sans-serif;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:7px 18px;cursor:pointer;transition:color .15s,border-color .15s}
+.reset-btn:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+
+/* ---- SETUP SCREEN ---- */
+.setup-screen{position:fixed;inset:0;background:radial-gradient(ellipse at top,#0a1f6e 0%,#040d2e 70%);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+.setup-card{background:linear-gradient(160deg,#1a3aad,#040d2e);border:3px solid var(--gold);border-radius:16px;padding:36px 32px;max-width:460px;width:100%;box-shadow:0 0 60px rgba(245,197,24,.25);animation:popIn .3s cubic-bezier(.34,1.56,.64,1)}
+.setup-card h2{font-family:'Oswald',sans-serif;font-size:1.7rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;text-align:center;margin-bottom:26px}
+.setup-section-label{font-family:'Oswald',sans-serif;font-size:.75rem;letter-spacing:.14em;color:rgba(255,255,255,.45);text-transform:uppercase;margin-bottom:10px}
+.team-count-btns{display:flex;gap:8px;margin-bottom:22px}
+.tc-btn{flex:1;font-family:'Oswald',sans-serif;font-size:.92rem;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.06);color:rgba(255,255,255,.45);border:2px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 6px;cursor:pointer;transition:all .15s}
+.tc-btn.active{background:rgba(245,197,24,.14);color:var(--gold);border-color:var(--gold)}
+.tc-btn:hover:not(.active){background:rgba(255,255,255,.1);color:#fff}
+.team-input-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.team-input-num{font-family:'Oswald',sans-serif;font-size:.85rem;color:rgba(255,255,255,.4);min-width:52px}
+.team-input-row input{flex:1;background:rgba(0,0,0,.4);border:1.5px solid rgba(255,255,255,.18);border-radius:8px;color:#fff;font-size:1rem;padding:9px 14px;font-family:'Barlow',sans-serif;transition:border-color .15s}
+.team-input-row input:focus{outline:none;border-color:var(--gold);background:rgba(0,0,0,.55)}
+.start-game-btn{display:block;width:100%;font-family:'Oswald',sans-serif;font-size:1.05rem;letter-spacing:.1em;text-transform:uppercase;background:var(--gold);color:#000;border:none;border-radius:10px;padding:13px;cursor:pointer;transition:background .15s;font-weight:700;margin-top:22px}
+.start-game-btn:hover{background:var(--gold-dark)}
+
+/* ---- ROUND TABS ---- */
+.round-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.round-tab{font-family:'Oswald',sans-serif;font-size:.88rem;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.06);color:rgba(255,255,255,.38);border:2px solid rgba(255,255,255,.15);border-radius:20px;padding:7px 24px;cursor:pointer;transition:all .18s}
+.round-tab:hover:not(.active){background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.35)}
+.round-tab.active{background:rgba(245,197,24,.15);color:var(--gold);border-color:var(--gold)}
+.round-tab.done::after{content:' ✓';opacity:.6}
+
+/* ---- DAILY DOUBLE ---- */
+.dd-banner{background:linear-gradient(135deg,#e65100,#bf360c);border:2px solid #ffb74d;border-radius:10px;padding:11px 18px;text-align:center;font-family:'Oswald',sans-serif;font-size:1.15rem;font-weight:700;letter-spacing:.14em;color:#fff;text-transform:uppercase;margin-bottom:14px;animation:ddPop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes ddPop{from{transform:scale(.7) rotate(-4deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+
+/* ---- SPLASH SCREEN ---- */
+.splash-screen{position:fixed;inset:0;z-index:400;background:radial-gradient(ellipse at center,#060c4a 0%,#00020f 65%);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden}
+.splash-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 90%,rgba(80,40,180,.35) 0%,transparent 55%),radial-gradient(ellipse at 20% 50%,rgba(180,0,200,.1) 0%,transparent 40%),radial-gradient(ellipse at 80% 50%,rgba(0,80,255,.1) 0%,transparent 40%);pointer-events:none}
+.splash-line{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#f5c518,transparent);animation:scanLine 3s ease 0.5s infinite;opacity:.4}
+@keyframes scanLine{0%{transform:translateY(0)}100%{transform:translateY(-100vh)}}
+.splash-title{font-family:'Oswald',sans-serif;font-size:clamp(4rem,14vw,9.5rem);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:flex;margin-bottom:20px;line-height:1}
+.splash-title span{display:inline-block;color:#1a0c00;text-shadow:none;animation:letterLight 0.5s cubic-bezier(.2,0,.4,1) forwards}
+@keyframes letterLight{0%{color:#1a0c00;text-shadow:none;transform:scale(.9)}45%{color:#fff9d0;text-shadow:0 0 15px #fff,0 0 35px #f5c518,0 0 70px #f5c518,0 0 120px rgba(245,197,24,.6);transform:scale(1.08)}100%{color:#f5c518;text-shadow:0 0 12px rgba(245,197,24,.9),0 0 28px rgba(245,197,24,.55),0 0 55px rgba(245,197,24,.25);transform:scale(1)}}
+.splash-sub{font-family:'Oswald',sans-serif;font-size:clamp(.95rem,3.5vw,1.7rem);letter-spacing:.4em;text-transform:uppercase;color:rgba(255,255,255,0);animation:subFadeIn 0.7s ease 2s forwards}
+@keyframes subFadeIn{from{color:rgba(255,255,255,0);letter-spacing:.55em}to{color:rgba(255,255,255,.72);letter-spacing:.4em}}
+.splash-hint{position:absolute;bottom:38px;font-size:.78rem;color:rgba(255,255,255,0);letter-spacing:.14em;text-transform:uppercase;animation:hintPulse 1.6s ease 2.8s infinite}
+@keyframes hintPulse{0%,100%{color:rgba(255,255,255,0)}50%{color:rgba(255,255,255,.38)}}
+
+/* ---- CATEGORY REVEAL ---- */
+.category-header.unrevealed{cursor:pointer;background:#050f1a;border-color:rgba(255,255,255,.08);transition:background .15s,border-color .15s}
+.category-header.unrevealed:hover{background:#0b1f35;border-color:rgba(255,255,255,.22)}
+.cat-q{font-family:'Oswald',sans-serif;font-size:2.2rem;font-weight:700;color:rgba(255,255,255,.15);user-select:none}
+.category-header.revealed{animation:catReveal .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes catReveal{from{transform:scale(.8) rotateX(25deg);opacity:.2}to{transform:scale(1) rotateX(0);opacity:1}}
+
+/* ---- FULLSCREEN ---- */
+.fs-btn{font-family:'Oswald',sans-serif;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:rgba(255,255,255,.45);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 14px;cursor:pointer;transition:color .15s,border-color .15s;white-space:nowrap}
+.fs-btn:hover{color:#fff;border-color:rgba(255,255,255,.6)}
+
+/* ---- COUNTDOWN ---- */
+.countdown{position:relative;width:72px;height:72px;margin:0 auto 18px;display:none;align-items:center;justify-content:center;flex-shrink:0}
+.countdown svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.cd-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:5}
+.cd-ring{fill:none;stroke:#4caf50;stroke-width:5;stroke-linecap:round;stroke-dasharray:182.2;stroke-dashoffset:0;transition:stroke-dashoffset .95s linear,stroke .35s ease}
+.cd-num{font-family:'Oswald',sans-serif;font-size:1.7rem;font-weight:700;color:#fff;position:relative;z-index:1;line-height:1;transition:color .35s}
+.countdown.urgent .cd-num{animation:urgentPulse .5s ease infinite}
+@keyframes urgentPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* ---- SUDDEN DEATH ---- */
+.round-tab.sudden-death{border-color:#ef5350;color:#ef9a99}
+.round-tab.sudden-death.active{background:rgba(239,83,80,.18);color:#ef5350;border-color:#ef5350}
+.board.sudden-death-board{max-width:600px}
+.board.sudden-death-board .category-header{font-size:clamp(1.1rem,2.5vw,1.6rem);min-height:90px;background:linear-gradient(135deg,#7f0000,#3a0000);border-color:#ef5350;letter-spacing:.1em}
+.board.sudden-death-board .cell{min-height:160px;border-color:rgba(239,83,80,.3)}
+.board.sudden-death-board .cell:hover:not(.answered){background:#b71c1c;border-color:#ef5350}
+.board.sudden-death-board .cell-points{font-size:2.5rem;color:#ef9a99}
+</style>
+</head>
+<body>
+<!-- SPLASH SCREEN -->
+<div class="splash-screen" id="splash-screen">
+  <div class="splash-line"></div>
+  <div class="splash-title" id="splash-title"></div>
+  <div class="splash-sub">FRR Special</div>
+  <div class="splash-hint">Klikk for å fortsette</div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div class="setup-screen" id="setup-screen">
+  <div class="setup-card">
+    <h2>Konfigurer lag</h2>
+    <div class="setup-section-label">Antall lag</div>
+    <div class="team-count-btns">
+      <button class="tc-btn" id="tc-2" onclick="setTeamCount(2)">2 lag</button>
+      <button class="tc-btn active" id="tc-3" onclick="setTeamCount(3)">3 lag</button>
+      <button class="tc-btn" id="tc-4" onclick="setTeamCount(4)">4 lag</button>
+    </div>
+    <div class="setup-section-label">Lagnavn</div>
+    <div id="team-inputs"></div>
+    <button class="start-game-btn" onclick="startGame()">Start spill ➜</button>
+  </div>
+</div>
+<!-- TOP -->
+<div class="top">
+  <h1>⚡ Jeopardy Quiz</h1>
+  <div class="round-badge" id="round-badge">Runde 1 av 2</div>
+  <button class="fs-btn" id="fs-btn" onclick="toggleFullscreen()">⛶ Fullskjerm</button>
+</div>
+
+<!-- FIREBASE CONFIG -->
+<div class="firebase-bar">
+  <span class="conn-dot" id="conn-dot"></span>
+  <span class="conn-label" id="conn-label">Ikke tilkoblet</span>
+  <label>Firebase URL:</label>
+  <input id="fb-url" type="text" placeholder="https://ditt-prosjekt-default-rtdb.firebaseio.com" />
+  <button onclick="connectFirebase()">Koble til</button>
+</div>
+
+<!-- BUZZ ALERT -->
+<div class="buzz-alert" id="buzz-alert">
+  <button class="buzz-clear" onclick="clearBuzz()" title="Tøm">✕</button>
+  <h3>🔔 BUZZ! Vi kan svaret:</h3>
+  <div class="buzzer-name" id="buzzer-name">—</div>
+</div>
+
+<!-- SCOREBOARD -->
+<div class="scoreboard" id="scoreboard"></div>
+
+<!-- ROUND TABS -->
+<div class="round-tabs" id="round-tabs"></div>
+
+<!-- BOARD -->
+<div class="board-wrapper">
+  <div class="board" id="board"></div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-buzz" id="modal-buzz">
+      <button class="modal-buzz-clear" onclick="clearBuzz()" title="Tøm">✕</button>
+      <div class="modal-buzz-label">🔔 Buzz! Vi kan svaret:</div>
+      <div class="modal-buzz-team" id="modal-buzz-team">—</div>
+    </div>
+    <div class="dd-banner" id="dd-banner" style="display:none">⭐ DOBLE POENG!</div>
+    <div class="modal-cat" id="modal-cat"></div>
+    <div class="modal-pts" id="modal-pts"></div>
+    <div class="modal-question" id="modal-q"></div>
+    <div class="countdown" id="countdown">
+      <svg viewBox="0 0 70 70" width="70" height="70">
+        <circle class="cd-track" cx="35" cy="35" r="29"/>
+        <circle class="cd-ring"  id="cd-ring" cx="35" cy="35" r="29"/>
+      </svg>
+      <span class="cd-num" id="cd-num">10</span>
+    </div>
+    <button class="reveal-btn" id="reveal-btn" onclick="revealAnswer()">Vis svar</button>
+    <div class="answer-box" id="answer-box"></div>
+    <div class="award-section" id="award-section">
+      <div class="award-label">Tildel poeng</div>
+      <div class="award-btns" id="award-btns"></div>
+    </div>
+    <button class="close-btn" onclick="closeModal()">Lukk uten å tildele</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="leaderboard-screen" id="lb-screen">
+  <div class="lb-title">🏆 Halvtid!</div>
+  <div class="lb-subtitle" id="lb-sub">Runde 1 er ferdig – her er stillingen</div>
+  <ul class="lb-list" id="lb-list"></ul>
+  <button class="lb-btn" id="lb-btn" onclick="startRound2()">Start runde 2 ➜</button>
+</div>
+
+<div class="bottom-bar">
+  <button class="reset-btn" onclick="resetGame()">Nullstill hele spillet</button>
+</div>
+
+<script>
+/* ===================================================
+   REDIGER DISSE SEKSJONENE
+   =================================================== */
+
+let TEAMS = [];
+let dailyDoubles = [new Set(), new Set()];
+let revealedCats = [new Set(), new Set()];
+
+/* ---------- Splash screen ---------- */
+function initSplash() {
+  const el = document.getElementById('splash-title');
+  const text = 'JEOPARDY!';
+  el.innerHTML = '';
+  text.split('').forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.textContent = ch === '!' ? '!' : ch;
+    span.style.animationDelay = (0.25 + i * 0.11) + 's';
+    el.appendChild(span);
+  });
+  const screen = document.getElementById('splash-screen');
+  screen.addEventListener('click', dismissSplash);
+  document.addEventListener('keydown', dismissSplash, { once: true });
+}
+
+function dismissSplash() {
+  const screen = document.getElementById('splash-screen');
+  screen.style.transition = 'opacity .5s ease';
+  screen.style.opacity = '0';
+  setTimeout(() => {
+    screen.style.display = 'none';
+    showSetupScreen();
+  }, 480);
+  document.removeEventListener('keydown', dismissSplash);
+}
+
+/* ---------- Category reveal ---------- */
+function revealCategory(col) {
+  const header = document.getElementById('cat-header-' + col);
+  if (!header || !header.classList.contains('unrevealed')) return;
+  header.classList.remove('unrevealed');
+  header.classList.add('revealed');
+  header.textContent = ROUNDS[currentRound][col].name;
+  header.onclick = null;
+  if (!revealedCats[currentRound]) revealedCats[currentRound] = new Set();
+  revealedCats[currentRound].add(col);
+}
+
+
+/* ---------- Daily doubles ---------- */
+function generateDailyDoubles() {
+  dailyDoubles = ROUNDS.map(() => new Set());
+
+  function pickRandom(roundIdx, count) {
+    const cats = ROUNDS[roundIdx];
+    const cells = [];
+    cats.forEach((cat, col) => cat.questions.forEach((_, row) => cells.push(`${col}-${row}`)));
+    // Shuffle and take first `count`
+    for (let i = cells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+    cells.slice(0, count).forEach(id => dailyDoubles[roundIdx].add(id));
+  }
+
+  if (ROUNDS.length >= 1) pickRandom(0, 1);
+  if (ROUNDS.length >= 2) pickRandom(1, 2);
+  if (ROUNDS.length >= 3) pickRandom(2, 2);
+}
+
+
+const ROUNDS = [
+  // ---- RUNDE 1 ----
+  [
+    {
+      name:"Trafikkregler",
+      questions:[
+        {q:"Hva er fartsgrensen i tettbygd strøk når ingen annen grense er skiltet?",                  a:"50 km/t",                                pts:100},
+        {q:"Hva er promillegrensen for bilkjøring i Norge?",                                           a:"0,2 promille",                           pts:200},
+        {q:"Hva er fartsgrensen for traktorer på offentlig vei?",                                      a:"40 km/t",                                pts:300},
+        {q:"Hva er laveste tillatte mønsterdybden på sommerdekk i Norge?",                             a:"1,6 mm",                                 pts:400},
+        {q:"Når har trikken vikeplikt for deg?",                                                       a:"Når trikken kjører inn i en rundkjøring du allerede er i",    pts:500},
+      ]
+    },
+    {
+      name:"Sport",
+      questions:[
+        {q:"Hva er det offisielle antallet ringer i det olympiske symbolet?",                          a:"5",                                      pts:100},
+        {q:"Hvilket land har flest VM gull i fotball (både kvinner og herrer)?",                       a:"Tyskland",                               pts:200},
+        {q:"Hvilken norsk skøyteløper dominerte distanseløp på 1990-tallet og vant OL-gull i Lillehammer?", a:"Johann Olav Koss",                 pts:300},
+        {q:"Hvor mange poeng gir en \"try\" i rugby?",                                                 a:"5",                                      pts:400},
+        {q:"Michael Schumacher og Lewis Hamilton har vunnet like mange VM-titler i F1. Hvor mange?",   a:"7 hver",                                 pts:500},
+      ]
+    },
+    {
+      name:"Musikk",
+      questions:[
+        {q:"Hva heter den norske artisten som vant Eurovision Song Contest i 2009 med låten «Fairytale»?", a:"Alexander Rybak",                   pts:100},
+        {q:"Hvilket band hadde John Lennon og Paul McCartney som medlemmer?",                          a:"The Beatles",                            pts:200},
+        {q:"Hva heter Beyoncés tidligere jentegruppe før solokarrieren?",                              a:"Destiny's Child",                        pts:300},
+        {q:"Hva heter den klassiske balletten av Tsjajkovskij der en prinsesse forvandles til en svane?", a:"Svanesjøen (Swan Lake)",            pts:400},
+        {q:"Hvilket år ble Spotify grunnlagt?",                                                        a:"2006",                                   pts:500},
+      ]
+    },
+    {
+      name:"IFRS",
+      questions:[
+        {q:"Hva står forkortelsen IFRS for?",                                                          a:"International Financial Reporting Standards", pts:100},
+        {q:"Hvilken standard regulerer presentasjon av finansregnskap?",                               a:"IAS 1 – Presentasjon av finansregnskap", pts:200},
+        {q:"Hvilken standard omhandler leieavtaler?",                                                  a:"IFRS 16 – Leieavtaler",                  pts:300},
+        {q:"Hvilken IFRS-standard regulerer opplysninger om nærstående parter?",                       a:"IAS 24",                                 pts:400},
+        {q:"Etter å ha kjøpt en virksomhet, hvor lang tid har Statkraft på seg til å ferdigstille kjøpesumsallokeringen i henhold til IFRS 3?", a:"12 måneder", pts:500},
+      ]
+    },
+    {
+      name:"Geografi",
+      questions:[
+        {q:"Hva heter hovedstaden i Australia?",                                                       a:"Canberra",                               pts:100},
+        {q:"Hvor mange kontinenter finnes det?",                                                       a:"7",                                      pts:200},
+        {q:"Hvilket land har flest innbyggere i verden?",                                              a:"India (1,46 MRD mot 1,41 MRD i Kina)",   pts:300},
+        {q:"Hva heter stredet mellom Norge og Danmark?",                                               a:"Skagerrak",                              pts:400},
+        {q:"Hvilke tre land er enklaver – altså fullstendig omringet av ett annet land?",              a:"Lesotho, Vatikanstaten og San Marino",    pts:500},
+      ]
+    },
+    {
+      name:"Mat & Drikke",
+      questions:[
+        {q:"Hvilket land produserer mest kaffe i verden?",                                             a:"Brasil",                                 pts:100},
+        {q:"Hva er hovedingrediensen i hummus?",                                                      a:"Kikerter",                               pts:200},
+        {q:"Hva heter teknikken der man tilbereder mat i vakuumpose i vannbad ved lav, kontrollert temperatur?", a:"Sous vide",                    pts:300},
+        {q:"Hvilken drikke er den mest konsumerte i verden etter vann?",                               a:"Te",                                     pts:400},
+        {q:"Hva heter teknikken der man koker et egg uten skall i vann?",                              a:"Posjering",                              pts:500},
+      ]
+    }
+  ],
+  // ---- RUNDE 2 ----
+  [
+    {
+      name:"Vitenskap",
+      questions:[
+        {q:"Hvilken planet er nærmest solen?",                                                         a:"Merkur",                                 pts:200},
+        {q:"Hva er det mest tallrike grunnstoffet i universet?",                                       a:"Hydrogen",                               pts:400},
+        {q:"Hva heter den grenen av vitenskapen som studerer arv og gener?",                           a:"Genetikk",                               pts:600},
+        {q:"Hva er lysets hastighet i vakuum, avrundet?",                                             a:"Ca. 300 000 km/s (299 792 458 m/s)",     pts:800},
+        {q:"Hvor mange hjerter har en blekksprut?",                                                    a:"3",                                      pts:1000},
+      ]
+    },
+    {
+      name:"Popkultur",
+      questions:[
+        {q:"Hvilken artist er kjent som «Queen of Pop»?",                                              a:"Madonna",                                pts:200},
+        {q:"Hvilken artist er kjent for å ha gitt ut albumene «1989», «Reputation» og «Midnights»?",  a:"Taylor Swift",                           pts:400},
+        {q:"Hva heter streamingplattformen kjent for serier som «Stranger Things» og «The Crown»?",   a:"Netflix",                                pts:600},
+        {q:"Hva heter kunstneren bak gatekunstverket «Girl with Balloon»?",                           a:"Banksy",                                 pts:800},
+        {q:"Hva heter regissøren som står bak filmene «Pulp Fiction» og «Kill Bill»?",                a:"Quentin Tarantino",                      pts:1000},
+      ]
+    },
+    {
+      name:"Teknologi og spill",
+      questions:[
+        {q:"Hva står «WWW» for?",                                                                      a:"World Wide Web",                         pts:200},
+        {q:"Minecraft er verdens mest solgte spill – hvem eier det?",                                  a:"Microsoft",                              pts:400},
+        {q:"Hvilket år ble den første iPhone lansert?",                                                a:"2007",                                   pts:600},
+        {q:"Hvilken sosial plattform regnes som den største (målt i månedlige aktive brukere)?",       a:"Facebook",                               pts:800},
+        {q:"Hva er navnet på den virtuelle valutaen brukt i Roblox?",                                  a:"Robux",                                  pts:1000},
+      ]
+    },
+    {
+      name:"Svar som begynner på K",
+      questions:[
+        {q:"Hvilket pungdyr er Australias nasjonalsymbol?",                                            a:"Kenguru",                                pts:200},
+        {q:"Hva er Supermans svakhet?",                                                                a:"Kryptonitt",                             pts:400},
+        {q:"Hva heter fettstoffet i blodet som i høye konsentrasjoner kan gi hjertesykdom?",           a:"Kolesterol",                             pts:600},
+        {q:"Hva heter grunnstoffet med atomnummer 27, viktig i litium-ion-batterier?",                 a:"Kobolt",                                 pts:800},
+        {q:"Hva heter Karl Marx' hovedverk fra 1867?",                                                 a:"Kapitalen (Das Kapital)",                pts:1000},
+      ]
+    },
+    {
+      name:"Kjente sitater",
+      questions:[
+        {q:"Hvem sa: «I have a dream»?",                                                               a:"Martin Luther King Jr.",                 pts:200},
+        {q:"Hvem sa: «That's one small step for man, one giant leap for mankind»?",                    a:"Neil Armstrong",                         pts:400},
+        {q:"Hvem sa: «Ask not what your country can do for you – ask what you can do for your country»?", a:"John F. Kennedy",                    pts:600},
+        {q:"Hvem sa: «I think, therefore I am»?",                                                      a:"René Descartes",                         pts:800},
+        {q:"Hvem sa: «It ain't over till it's over»?",                                                 a:"Yogi Berra",                             pts:1000},
+      ]
+    },
+    {
+      name:"Norge og Tyskland rundt",
+      questions:[
+        {q:"Hvilket hav ligger vest for Norge?",                                                       a:"Atlanterhavet / Norskehavet",             pts:200},
+        {q:"Hva heter den ikoniske tyske porten i Berlin?",                                            a:"Brandenburger Tor",                      pts:400},
+        {q:"Hva heter det tyske parlamentet?",                                                         a:"Bundestag",                              pts:600},
+        {q:"Hva heter den norske kommunen med størst landareal?",                                      a:"Kautokeino",                             pts:800},
+        {q:"Hva heter Norges største nasjonalpark?",                                                   a:"Nordvest-Spitsbergen nasjonalpark",       pts:1000},
+      ]
+    }
+  ],
+  // ---- RUNDE 3 ----
+  [
+    {
+      name:"Film & TV",
+      questions:[
+        {q:"Hvilken serie handler om en gruppe venner i New York som henger på en kafé?",              a:"Friends",                                pts:200},
+        {q:"Hva heter skurken i Løvenes Konge?",                                                      a:"Skar",                                   pts:400},
+        {q:"Hva heter regissøren bak Schindlers liste og Jurassic Park?",                             a:"Steven Spielberg",                       pts:600},
+        {q:"Hvilken skuespiller har spilt James Bond flest ganger?",                                  a:"Roger Moore (7 ganger)",                 pts:800},
+        {q:"Hvilken skuespiller har vunnet flest Oscar for beste skuespiller?",                       a:"Katharine Hepburn (4 ganger)",           pts:1000},
+      ]
+    },
+    {
+      name:"Tall & Rekorder",
+      questions:[
+        {q:"Hvor mange dager er det i et skuddår?",                                                   a:"366",                                    pts:200},
+        {q:"Hvor mange meter over havet ligger Mount Everest, avrundet til nærmeste hundre?",         a:"8 800 moh. (8 849 m)",                   pts:400},
+        {q:"Hvor mange sekunder brukte Usain Bolt på verdensrekorden på 100 meter?",                  a:"9,58 sekunder",                          pts:600},
+        {q:"Hvor mange prosent av jordens overflate er dekket av hav?",                               a:"Ca. 71 prosent",                         pts:800},
+        {q:"Hvor mange meter er Lærdalstunnelen – verdens lengste vegtunnel?",                        a:"24 509 meter",                           pts:1000},
+      ]
+    },
+    {
+      name:"Selskaper & Merkevarer",
+      questions:[
+        {q:"Hvilket sportsmerkevare bruker slagordet «Just Do It»?",                                  a:"Nike",                                   pts:200},
+        {q:"Hvilket selskap lager Xbox?",                                                             a:"Microsoft",                              pts:400},
+        {q:"Hva betyr forkortelsen BMW?",                                                             a:"Bayerische Motoren Werke",               pts:600},
+        {q:"Hvilket selskap bruker slagordet «Vorsprung durch Technik»?",                             a:"Audi",                                   pts:800},
+        {q:"Hvilket selskap eier luksusmerker som Louis Vuitton, Moët og Hennessy?",                  a:"LVMH",                                   pts:1000},
+      ]
+    },
+    {
+      name:"Forkortelser",
+      questions:[
+        {q:"Hva står FN for?",                                                                        a:"Forente Nasjoner",                       pts:200},
+        {q:"Hva står IMF for?",                                                                       a:"International Monetary Fund",            pts:400},
+        {q:"Hva står OPEC for?",                                                                      a:"Organization of the Petroleum Exporting Countries", pts:600},
+        {q:"Hva står GAAP for i regnskapssammenheng?",                                                a:"Generally Accepted Accounting Principles", pts:800},
+        {q:"Hva står SPAC for i finansverdenen?",                                                     a:"Special Purpose Acquisition Company",    pts:1000},
+      ]
+    },
+    {
+      name:"Litt av hvert",
+      questions:[
+        {q:"Hvor mange sider har en terning?",                                                        a:"6",                                      pts:200},
+        {q:"Hva heter den nordligste hovedstaden i verden?",                                          a:"Reykjavik",                              pts:400},
+        {q:"Hva heter den eneste fuglen som kan fly bakover?",                                        a:"Kolibri",                                pts:600},
+        {q:"Hvilket grunnstoff har kjemisk symbol Fe?",                                               a:"Jern",                                   pts:800},
+        {q:"Hva heter instrumentet som måler jordskjelv?",                                            a:"Seismograf",                             pts:1000},
+      ]
+    },
+    {
+      name:"Kongehus & Politikk",
+      questions:[
+        {q:"Hva heter det norske parlamentet?",                                                       a:"Stortinget",                             pts:200},
+        {q:"Hva heter den tyske statsministertittelen?",                                              a:"Forbundskansler (Bundeskansler)",         pts:400},
+        {q:"Hva heter den tyske forbundskansleren som ledet gjenforeningen av Øst- og Vest-Tyskland?", a:"Helmut Kohl",                           pts:600},
+        {q:"Hva heter EUs øverste lovgivende organ?",                                                 a:"Europaparlamentet",                      pts:800},
+        {q:"Hva heter det politiske systemet der religiøse ledere styrer staten?",                    a:"Teokrati",                               pts:1000},
+      ]
+    }
+  ],
+  // ---- SUDDEN DEATH ----
+  [
+    {
+      name:"⚡ SUDDEN DEATH",
+      questions:[
+        {q:"I Norge har vi 357 kommuner, hvor mange har de i Sverige?", a:"290", pts:1000},
+      ]
+    }
+  ]
+];
+/* =================================================== */
+
+let currentRound = 0;
+let answeredByRound = [];
+let currentCell = null;
+let db = null;
+let buzzListener = null;
+let setupTeamCount = 3;
+let savedSetupNames = ['', '', '', ''];
+
+/* ---------- Setup screen ---------- */
+function showSetupScreen() {
+  document.querySelectorAll('.tc-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tc-' + setupTeamCount).classList.add('active');
+  renderTeamInputs();
+  document.getElementById('setup-screen').style.display = 'flex';
+}
+
+function setTeamCount(n) {
+  const vals = readInputValues();
+  vals.forEach((v, i) => { savedSetupNames[i] = v; });
+  setupTeamCount = n;
+  document.querySelectorAll('.tc-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tc-' + n).classList.add('active');
+  renderTeamInputs();
+}
+
+function renderTeamInputs() {
+  const container = document.getElementById('team-inputs');
+  container.innerHTML = '';
+  for (let i = 0; i < setupTeamCount; i++) {
+    const row = document.createElement('div');
+    row.className = 'team-input-row';
+    row.innerHTML = `<span class="team-input-num">Lag ${i+1}</span>
+      <input id="ti-${i}" type="text" placeholder="Lagnavn ${i+1}" value="${savedSetupNames[i] || ''}" maxlength="24" />`;
+    container.appendChild(row);
+    // Focus first field
+    if (i === 0) setTimeout(() => row.querySelector('input').focus(), 50);
+  }
+}
+
+function readInputValues() {
+  const vals = [];
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById('ti-' + i);
+    vals.push(el ? el.value.trim() : '');
+  }
+  return vals;
+}
+
+function writeTeamsToFirebase() {
+  if (!db) return;
+  fetch(`${db}/teams.json`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(TEAMS.map(t => t.name))
+  }).catch(()=>{});
+}
+
+function startGame() {
+  const names = readInputValues();
+  TEAMS.length = 0;
+  for (let i = 0; i < setupTeamCount; i++) {
+    TEAMS.push({ name: names[i] || `Lag ${i+1}`, score: 0 });
+  }
+  document.getElementById('setup-screen').style.display = 'none';
+  if (db) writeTeamsToFirebase();
+  generateDailyDoubles();
+  answeredByRound = ROUNDS.map(() => ({}));
+  revealedCats = ROUNDS.map(() => new Set());
+  buildScoreboard();
+  buildBoard();
+}
+
+
+/* ---------- Firebase ---------- */
+function connectFirebase() {
+  const url = document.getElementById('fb-url').value.trim().replace(/\/$/, '');
+  if (!url) return alert('Lim inn Firebase Realtime Database URL-en din');
+  db = url;
+  setConnState('connecting', 'Kobler til…');
+  pingFirebase();
+}
+
+function pingFirebase() {
+  fetch(`${db}/buzz.json`)
+    .then(r => r.json())
+    .then(() => {
+      setConnState('ok', 'Tilkoblet ✓');
+      listenBuzz();
+      resetBuzzOnServer();
+      if (TEAMS.length > 0) writeTeamsToFirebase();
+    })
+    .catch(() => setConnState('err', 'Feil – sjekk URL'));
+}
+
+function setConnState(state, label) {
+  const dot = document.getElementById('conn-dot');
+  const lbl = document.getElementById('conn-label');
+  dot.className = 'conn-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+  lbl.textContent = label;
+}
+
+function listenBuzz() {
+  if (buzzListener) clearInterval(buzzListener);
+  let lastSeen = null;
+  buzzListener = setInterval(async () => {
+    try {
+      const r = await fetch(`${db}/buzz.json`);
+      const data = await r.json();
+      if (!data || data.team === '__cleared__') {
+        if (lastSeen !== null) {
+          lastSeen = null;
+          hideBuzz();
+        }
+        return;
+      }
+      if (data.team && data.team !== lastSeen && data.team !== '__cleared__') {
+        lastSeen = data.team;
+        showBuzz(data.team);
+      }
+    } catch(e){}
+  }, 600);
+}
+
+function showBuzz(team) {
+  // Show on board (if modal closed)
+  document.getElementById('buzzer-name').textContent = team;
+  document.getElementById('buzz-alert').classList.add('visible');
+  // Show inside modal (if open)
+  document.getElementById('modal-buzz-team').textContent = team;
+  document.getElementById('modal-buzz').classList.add('visible');
+}
+
+function hideBuzz() {
+  document.getElementById('buzz-alert').classList.remove('visible');
+  document.getElementById('modal-buzz').classList.remove('visible');
+}
+
+function clearBuzz() {
+  hideBuzz();
+  resetBuzzOnServer();
+}
+
+function resetBuzzOnServer() {
+  if (!db) return;
+  fetch(`${db}/buzz.json`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({team:'__cleared__',ts:Date.now()})
+  }).catch(()=>{});
+  // Also reset readyTeams
+  fetch(`${db}/ready.json`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(null)
+  }).catch(()=>{});
+}
+
+/* ---------- UI build ---------- */
+function buildScoreboard() {
+  const sb = document.getElementById('scoreboard');
+  sb.innerHTML = '';
+  TEAMS.forEach((team, ti) => {
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    card.innerHTML = `
+      <div class="team-name">${team.name}</div>
+      <div class="team-score" id="score-${ti}">${team.score}</div>
+      <div class="score-btns">
+        <button class="score-btn neg" onclick="adj(${ti},-500)">−500</button>
+        <button class="score-btn neg" onclick="adj(${ti},-200)">−200</button>
+        <button class="score-btn neg" onclick="adj(${ti},-100)">−100</button>
+        <button class="score-btn pos" onclick="adj(${ti},100)">+100</button>
+        <button class="score-btn pos" onclick="adj(${ti},200)">+200</button>
+        <button class="score-btn pos" onclick="adj(${ti},500)">+500</button>
+      </div>`;
+    sb.appendChild(card);
+  });
+}
+
+function adj(ti, delta) {
+  TEAMS[ti].score += delta;
+  document.getElementById(`score-${ti}`).textContent = TEAMS[ti].score;
+}
+
+/* ---------- Round tabs ---------- */
+function buildRoundTabs() {
+  const container = document.getElementById('round-tabs');
+  if (!container) return;
+  container.innerHTML = '';
+  ROUNDS.forEach((_, i) => {
+    const cats = ROUNDS[i];
+    const total = cats.length * cats[0].questions.length;
+    const done  = Object.keys(answeredByRound[i] || {}).length;
+    const btn = document.createElement('button');
+    const isSuddenDeath = i === ROUNDS.length - 1 && ROUNDS[i].length === 1 && ROUNDS[i][0].questions.length === 1;
+    btn.className = 'round-tab' + (isSuddenDeath ? ' sudden-death' : '') + (i === currentRound ? ' active' : '') + (done >= total ? ' done' : '');
+    btn.textContent = isSuddenDeath ? '⚡ Sudden Death' : `Runde ${i + 1}`;
+    btn.onclick = () => switchRound(i);
+    container.appendChild(btn);
+  });
+}
+
+function switchRound(n) {
+  currentRound = n;
+  buildBoard();
+}
+
+function buildBoard() {
+  const cats = ROUNDS[currentRound];
+  const board = document.getElementById('board');
+  const isSuddenDeathRound = cats.length === 1 && cats[0].questions.length === 1;
+  board.className = isSuddenDeathRound ? 'board sudden-death-board' : 'board';
+  board.style.gridTemplateColumns = `repeat(${cats.length}, minmax(130px, 1fr))`;
+  board.innerHTML = '';
+  const answered = answeredByRound[currentRound];
+  buildRoundTabs();
+
+  cats.forEach((cat, col) => {
+    const isRevealed = revealedCats[currentRound] && revealedCats[currentRound].has(col);
+    const h = document.createElement('div');
+    h.id = 'cat-header-' + col;
+    if (isRevealed) {
+      h.className = 'category-header revealed';
+      h.textContent = cat.name;
+    } else {
+      h.className = 'category-header unrevealed';
+      h.innerHTML = '<span class="cat-q">?</span>';
+      h.onclick = () => revealCategory(col);
+    }
+    board.appendChild(h);
+  });
+
+  const numRows = cats[0].questions.length;
+  for (let row = 0; row < numRows; row++) {
+    cats.forEach((cat, col) => {
+      const id = `${col}-${row}`;
+      const q = cat.questions[row];
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (answered[id] ? ' answered' : '');
+      cell.id = 'cell-' + id;
+      cell.innerHTML = `<span class="cell-points">${q.pts}</span>`;
+      if (!answered[id]) cell.onclick = () => openModal(col, row, id);
+      board.appendChild(cell);
+    });
+  }
+
+  document.getElementById('round-badge').textContent =
+    `Runde ${currentRound + 1} av ${ROUNDS.length}`;
+}
+
+/* ---------- Modal ---------- */
+function openModal(col, row, cellId) {
+  currentCell = cellId;
+  const cat = ROUNDS[currentRound][col];
+  const q   = cat.questions[row];
+  const isDD = dailyDoubles[currentRound] && dailyDoubles[currentRound].has(cellId);
+  const pts  = isDD ? q.pts * 2 : q.pts;
+
+  const ddBanner = document.getElementById('dd-banner');
+  ddBanner.style.display = isDD ? 'block' : 'none';
+  if (isDD) { ddBanner.style.animation = 'none'; void ddBanner.offsetWidth; ddBanner.style.animation = ''; }
+
+  document.getElementById('modal-cat').textContent = cat.name;
+  document.getElementById('modal-pts').textContent  = `${pts} poeng`;
+  document.getElementById('modal-q').textContent    = q.q;
+  document.getElementById('answer-box').textContent  = q.a;
+  document.getElementById('answer-box').classList.remove('visible');
+  document.getElementById('reveal-btn').style.display = 'block';
+  document.getElementById('award-section').classList.remove('visible');
+  document.getElementById('modal-buzz').classList.remove('visible');
+  document.getElementById('modal-buzz-team').textContent = '—';
+
+  const awardBtns = document.getElementById('award-btns');
+  awardBtns.innerHTML = '';
+  TEAMS.forEach((team, ti) => {
+    const ok = document.createElement('button');
+    ok.className = 'award-btn correct';
+    ok.textContent = `✓ ${team.name} +${pts}`;
+    ok.onclick = () => { adj(ti, pts); markAnswered(); closeModal(); };
+    awardBtns.appendChild(ok);
+
+    const ng = document.createElement('button');
+    ng.className = 'award-btn wrong';
+    ng.textContent = `✗ ${team.name} −${pts}`;
+    ng.onclick = () => adj(ti, -pts);
+    awardBtns.appendChild(ng);
+  });
+
+  if (db) resetBuzzOnServer();
+  startTimer();
+  document.getElementById('overlay').classList.add('active');
+}
+
+/* ---------- Countdown timer ---------- */
+let countdownTimer = null;
+const CD_CIRC = 2 * Math.PI * 29; // 182.21
+
+function startTimer() {
+  stopTimer();
+  let secs = 10;
+  const numEl  = document.getElementById('cd-num');
+  const ringEl = document.getElementById('cd-ring');
+  const cdEl   = document.getElementById('countdown');
+
+  numEl.textContent = secs;
+  numEl.style.color = '#fff';
+  ringEl.style.stroke = '#4caf50';
+  ringEl.style.strokeDashoffset = '0';
+  cdEl.classList.remove('urgent');
+  cdEl.style.display = 'flex';
+
+  countdownTimer = setInterval(() => {
+    secs--;
+    numEl.textContent = Math.max(0, secs);
+    ringEl.style.strokeDashoffset = CD_CIRC * (1 - secs / 10);
+
+    if (secs <= 3) {
+      ringEl.style.stroke = '#ef5350';
+      numEl.style.color = '#ef9a99';
+      cdEl.classList.add('urgent');
+    } else if (secs <= 6) {
+      ringEl.style.stroke = '#ff9800';
+      numEl.style.color = '#ffcc80';
+    }
+
+    if (secs <= 0) stopTimer();
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  const cdEl = document.getElementById('countdown');
+  if (cdEl) cdEl.style.display = 'none';
+}
+
+function playPling() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    [[523.25, 0, 0.35], [659.25, 0.08, 0.35], [783.99, 0.18, 0.5]].forEach(([freq, delay, dur]) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.28, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + dur);
+      osc.start(t + delay); osc.stop(t + delay + dur);
+    });
+  } catch(e) {}
+}
+
+function revealAnswer(withSound) {
+  stopTimer();
+  if (withSound) playPling();
+  document.getElementById('answer-box').classList.add('visible');
+  document.getElementById('reveal-btn').style.display = 'none';
+  document.getElementById('award-section').classList.add('visible');
+}
+
+function markAnswered() {
+  if (!currentCell) return;
+  answeredByRound[currentRound][currentCell] = true;
+  const cell = document.getElementById('cell-' + currentCell);
+  if (cell) { cell.classList.add('answered'); cell.onclick = null; }
+  checkRoundComplete();
+}
+
+function closeModal() {
+  stopTimer();
+  markAnswered();
+  document.getElementById('overlay').classList.remove('active');
+  currentCell = null;
+  if (db) resetBuzzOnServer();
+}
+
+/* ---------- Round complete check ---------- */
+function checkRoundComplete() {
+  const cats = ROUNDS[currentRound];
+  const total = cats.length * cats[0].questions.length;
+  const done  = Object.keys(answeredByRound[currentRound]).length;
+  if (done >= total) {
+    setTimeout(showLeaderboard, 500);
+  }
+}
+
+function showLeaderboard() {
+  const isLast = currentRound >= ROUNDS.length - 1;
+  const sorted = [...TEAMS].map((t,i)=>({...t,idx:i})).sort((a,b)=>b.score-a.score);
+
+  document.getElementById('lb-title') .textContent = isLast ? '🏆 Spillet er ferdig!' : `🏆 Runde ${currentRound + 1} ferdig!`;
+  document.getElementById('lb-sub')   .textContent = isLast
+    ? 'Her er det endelige resultatet'
+    : `Runde ${currentRound + 1} er ferdig – her er stillingen`;
+
+  const medals = ['🥇','🥈','🥉'];
+  const list = document.getElementById('lb-list');
+  list.innerHTML = '';
+  sorted.forEach((t,i) => {
+    const li = document.createElement('li');
+    li.className = 'lb-item';
+    li.style.animationDelay = `${i * 0.12}s`;
+    li.innerHTML = `
+      <span class="lb-rank">${medals[i] || i+1}</span>
+      <span class="lb-name">${t.name}</span>
+      <span class="lb-score">${t.score}</span>`;
+    list.appendChild(li);
+  });
+
+  const btn = document.getElementById('lb-btn');
+  if (isLast) {
+    btn.textContent = '🔄 Spill igjen';
+    btn.onclick = resetGame;
+  } else {
+    btn.textContent = `Start runde ${currentRound + 2} ➜`;
+    btn.onclick = startRound2;
+  }
+
+  document.getElementById('lb-screen').classList.add('active');
+}
+
+function startRound2() {
+  currentRound++;
+  document.getElementById('lb-screen').classList.remove('active');
+  buildBoard();
+}
+
+/* ---------- Reset ---------- */
+function resetGame() {
+  if (!confirm('Nullstille hele spillet (poeng og runder)?')) return;
+  answeredByRound = ROUNDS.map(() => ({}));
+  currentRound = 0;
+  document.getElementById('lb-screen').classList.remove('active');
+  // Pre-fill setup with current team names so they don't have to retype
+  setupTeamCount = TEAMS.length || 3;
+  TEAMS.forEach((t, i) => { savedSetupNames[i] = t.name; });
+  TEAMS.length = 0;
+  showSetupScreen();
+}
+
+/* ---------- Fullscreen ---------- */
+function toggleFullscreen() {
+  const btn = document.getElementById('fs-btn');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      btn.textContent = '✕ Avslutt fullskjerm';
+    }).catch(() => {});
+  } else {
+    document.exitFullscreen().then(() => {
+      btn.textContent = '⛶ Fullskjerm';
+    }).catch(() => {});
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fs-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '✕ Avslutt fullskjerm' : '⛶ Fullskjerm';
+});
+/* ---------- Init ---------- */
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay')) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    const btn = document.getElementById('reveal-btn');
+    if (btn && btn.style.display !== 'none' && document.getElementById('overlay').classList.contains('active')) {
+      e.preventDefault();
+      revealAnswer(true);
+    }
+  }
+});
+
+initSplash();
+</script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+﻿<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Jeopardy – Buzzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#f5c518;
+  --blue-dark:#040d2e;
+  --blue-mid:#1a3aad;
+  --green:#1b5e20;
+  --green-bright:#4caf50;
+  --red:#7f0000;
+  --red-bright:#ef5350;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{
+  font-family:'Barlow',sans-serif;
+  background:radial-gradient(ellipse at top,#0a1f6e,#040d2e);
+  min-height:100vh;min-height:100dvh;
+  width:100%;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;
+  color:#fff;
+}
+
+/* ---- SETUP AREA ---- */
+.setup-area{
+  display:flex;flex-direction:column;align-items:center;
+  width:100%;max-width:440px;
+  padding:env(safe-area-inset-top,24px) 24px 24px;
+  padding-top:max(env(safe-area-inset-top),24px);
+  flex:1;justify-content:center;gap:0;
+}
+h1{
+  font-family:'Oswald',sans-serif;font-size:clamp(1.6rem,7vw,2.4rem);font-weight:700;
+  color:var(--gold);text-transform:uppercase;letter-spacing:.1em;
+  text-shadow:0 0 25px rgba(245,197,24,.4);margin-bottom:28px;text-align:center;
+}
+.setup-box{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  border-radius:14px;padding:18px 20px;width:100%;margin-bottom:14px;
+}
+.setup-box label{font-size:.85rem;color:rgba(255,255,255,.55);display:block;margin-bottom:8px;letter-spacing:.04em}
+.setup-box input{
+  width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);
+  border-radius:8px;color:#fff;font-size:16px;padding:11px 14px;margin-bottom:12px;
+  -webkit-appearance:none;
+}
+.setup-box select{
+  width:100%;background:#0a1f6e;border:2px solid var(--gold);
+  border-radius:8px;color:#fff;font-size:16px;padding:11px 14px;margin-bottom:12px;
+  font-family:'Oswald',sans-serif;letter-spacing:.05em;-webkit-appearance:none;appearance:none;
+}
+.setup-box button{
+  width:100%;font-family:'Oswald',sans-serif;font-size:1.05rem;letter-spacing:.08em;
+  text-transform:uppercase;background:var(--gold);color:#000;border:none;
+  border-radius:10px;padding:14px;cursor:pointer;font-weight:700;
+  -webkit-appearance:none;
+}
+.conn-row{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.conn-dot{width:11px;height:11px;border-radius:50%;background:#444;flex-shrink:0}
+.conn-dot.ok{background:var(--green-bright)}
+.conn-dot.err{background:var(--red-bright)}
+.conn-label{font-size:.85rem;color:rgba(255,255,255,.55)}
+
+/* ---- GAME AREA ---- */
+.game-area{
+  display:none;flex-direction:column;align-items:center;
+  width:100%;flex:1;
+  padding-top:max(env(safe-area-inset-top),16px);
+  padding-bottom:max(env(safe-area-inset-bottom),20px);
+  padding-left:max(env(safe-area-inset-left),20px);
+  padding-right:max(env(safe-area-inset-right),20px);
+}
+.game-area.visible{display:flex}
+
+.team-banner{
+  font-family:'Oswald',sans-serif;font-size:clamp(1.1rem,5vw,1.6rem);font-weight:700;
+  color:var(--gold);letter-spacing:.12em;text-transform:uppercase;text-align:center;
+  text-shadow:0 0 18px rgba(245,197,24,.4);
+  padding:12px 0 4px;
+}
+
+/* ---- BUZZ BUTTON ---- */
+.buzz-wrap{flex:1;width:100%;display:flex;align-items:center;justify-content:center}
+.buzz-btn{
+  width:clamp(220px,68vmin,380px);height:clamp(220px,68vmin,380px);
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,#ef5350,#7f0000);
+  border:clamp(5px,1.2vmin,8px) solid #ef5350;
+  box-shadow:0 0 50px rgba(239,83,80,.55),0 10px 40px rgba(0,0,0,.5),inset 0 5px 15px rgba(255,255,255,.2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;cursor:pointer;
+  animation:readyPulse 2.4s ease-in-out infinite;
+  transition:transform .08s,box-shadow .15s,background .3s,border-color .3s;
+}
+.buzz-btn:active{transform:scale(.91)}
+@keyframes readyPulse{
+  0%,100%{box-shadow:0 0 40px rgba(239,83,80,.4),0 10px 40px rgba(0,0,0,.5)}
+  50%{box-shadow:0 0 80px rgba(239,83,80,.8),0 10px 40px rgba(0,0,0,.5)}
+}
+.buzz-btn.sent{
+  background:radial-gradient(circle at 32% 28%,#66bb6a,#1b5e20);
+  border-color:#4caf50;
+  box-shadow:0 0 60px rgba(76,175,80,.7),0 10px 40px rgba(0,0,0,.5);
+  animation:none;
+}
+.buzz-btn.locked{
+  background:radial-gradient(circle at 32% 28%,#5a5a5a,#1a1a1a);
+  border-color:#555;
+  box-shadow:0 0 20px rgba(0,0,0,.4),0 10px 40px rgba(0,0,0,.5);
+  animation:none;
+}
+.buzz-icon{font-size:clamp(2.8rem,11vmin,5rem);line-height:1;pointer-events:none}
+.buzz-label{
+  font-family:'Oswald',sans-serif;font-size:clamp(1.1rem,5.5vmin,2rem);
+  font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:#fff;text-shadow:1px 2px 6px rgba(0,0,0,.6);pointer-events:none;
+}
+
+/* ---- STATUS ---- */
+.status-msg{
+  font-size:clamp(.9rem,4vw,1.05rem);color:rgba(255,255,255,.55);
+  text-align:center;min-height:26px;padding:10px 0 4px;transition:color .2s;
+}
+.status-msg.sent{color:#81d985;font-weight:600}
+.status-msg.err{color:#ef9a99}
+
+.result-box{
+  display:none;width:100%;max-width:340px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:14px 20px;text-align:center;margin-top:4px;
+}
+.result-box.visible{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.result-box .who{font-family:'Oswald',sans-serif;font-size:.85rem;color:rgba(255,255,255,.4);margin-bottom:4px;letter-spacing:.08em;text-transform:uppercase}
+.result-box .winner{font-family:'Oswald',sans-serif;font-size:1.7rem;font-weight:700;color:var(--gold)}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="setup-area" id="setup-area">
+  <h1>⚡ Jeopardy</h1>
+
+  <div class="setup-box" id="setup-box">
+    <label>Firebase Realtime Database URL</label>
+    <input id="fb-url" type="url" inputmode="url" autocomplete="off" autocorrect="off"
+           placeholder="https://ditt-prosjekt-default-rtdb.firebaseio.com" />
+    <button onclick="setup()">Koble til</button>
+  </div>
+
+  <div class="setup-box" id="team-pick-step" style="display:none">
+    <label>Velg lag</label>
+    <select id="team-select">
+      <option value="">-- Velg lag --</option>
+      <option>Lag 1</option><option>Lag 2</option><option>Lag 3</option><option>Lag 4</option>
+    </select>
+    <button onclick="joinTeam()">Bli med ➜</button>
+  </div>
+
+  <div class="conn-row" id="conn-row" style="display:none">
+    <span class="conn-dot" id="conn-dot"></span>
+    <span class="conn-label" id="conn-label">Kobler til…</span>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="game-area" id="game-area">
+  <div class="team-banner" id="team-banner"></div>
+
+  <div class="buzz-wrap">
+    <button class="buzz-btn" id="buzz-btn">
+      <span class="buzz-icon">🔔</span>
+      <span class="buzz-label" id="buzz-label">BUZZ!</span>
+    </button>
+  </div>
+
+  <div class="status-msg" id="status-msg">Klar – trykk når du kan svare</div>
+
+  <div class="result-box" id="result-box">
+    <div class="who">Første til å buzze</div>
+    <div class="winner" id="result-winner">—</div>
+  </div>
+</div>
+
+<script>
+let db = null;
+let myTeam = null;
+let polling = null;
+let lastBuzz = null;
+let canBuzz = true;
+
+/* ---- Setup ---- */
+function setup() {
+  const url = document.getElementById('fb-url').value.trim().replace(/\/$/, '');
+  if (!url) return alert('Lim inn Firebase URL');
+  db = url;
+  document.getElementById('setup-box').style.display = 'none';
+  document.getElementById('conn-row').style.display  = 'flex';
+  document.getElementById('conn-dot').className       = 'conn-dot';
+  document.getElementById('conn-label').textContent   = 'Kobler til…';
+
+  fetch(`${db}/buzz.json`)
+    .then(r => r.json())
+    .then(() => fetch(`${db}/teams.json`))
+    .then(r => r.json())
+    .then(teams => {
+      const sel = document.getElementById('team-select');
+      if (Array.isArray(teams) && teams.length > 0) {
+        sel.innerHTML = '<option value="">-- Velg lag --</option>';
+        teams.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name; opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      }
+      document.getElementById('conn-dot').className      = 'conn-dot ok';
+      document.getElementById('conn-label').textContent  = 'Tilkoblet – velg lag';
+      document.getElementById('team-pick-step').style.display = 'block';
+    })
+    .catch(() => {
+      document.getElementById('conn-dot').className      = 'conn-dot err';
+      document.getElementById('conn-label').textContent  = 'Tilkobling feilet – sjekk URL';
+      document.getElementById('setup-box').style.display = 'block';
+    });
+}
+
+function joinTeam() {
+  const team = document.getElementById('team-select').value;
+  if (!team) return alert('Velg et lag');
+  myTeam = team;
+  document.getElementById('setup-area').style.display = 'none';
+  document.getElementById('team-banner').textContent  = team;
+  document.getElementById('game-area').classList.add('visible');
+  startPolling();
+}
+
+/* ---- Buzz ---- */
+function buzz() {
+  if (!db || !myTeam || !canBuzz) return;
+  if (navigator.vibrate) navigator.vibrate(60);
+
+  const btn = document.getElementById('buzz-btn');
+  const msg = document.getElementById('status-msg');
+
+  fetch(`${db}/buzz.json`)
+    .then(r => r.json())
+    .then(existing => {
+      if (existing && existing.team && existing.team !== '__cleared__') {
+        canBuzz = false;
+        lastBuzz = existing.team;
+        setLocked(existing.team);
+        return;
+      }
+      fetch(`${db}/buzz.json`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({team:myTeam, ts:Date.now()})
+      })
+      .then(r => r.json())
+      .then(() => {
+        canBuzz = false;
+        btn.classList.add('sent');
+        document.getElementById('buzz-label').textContent = 'SENDT!';
+        msg.textContent = '✓ Buzz sendt!';
+        msg.className   = 'status-msg sent';
+      })
+      .catch(() => { msg.textContent = 'Feil – prøv igjen'; msg.className = 'status-msg err'; });
+    })
+    .catch(() => { msg.textContent = 'Feil – prøv igjen'; msg.className = 'status-msg err'; });
+}
+
+function setLocked(winner) {
+  const btn = document.getElementById('buzz-btn');
+  const msg = document.getElementById('status-msg');
+  canBuzz = false;
+  document.getElementById('result-winner').textContent = winner;
+  document.getElementById('result-box').classList.add('visible');
+  if (winner === myTeam) {
+    btn.classList.add('sent');
+    document.getElementById('buzz-label').textContent = 'DU!';
+    msg.textContent = '✓ Du buzzet først!';
+    msg.className   = 'status-msg sent';
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+  } else {
+    btn.classList.add('locked');
+    document.getElementById('buzz-label').textContent = 'LÅST';
+    msg.textContent = `${winner} var raskere`;
+    msg.className   = 'status-msg err';
+  }
+}
+
+function resetUI() {
+  const btn = document.getElementById('buzz-btn');
+  btn.classList.remove('sent', 'locked');
+  document.getElementById('buzz-label').textContent  = 'BUZZ!';
+  document.getElementById('status-msg').textContent  = 'Klar – trykk når du kan svare';
+  document.getElementById('status-msg').className    = 'status-msg';
+  document.getElementById('result-box').classList.remove('visible');
+  canBuzz  = true;
+  lastBuzz = null;
+}
+
+/* ---- Polling ---- */
+function startPolling() {
+  polling = setInterval(async () => {
+    try {
+      const r    = await fetch(`${db}/buzz.json`);
+      const data = await r.json();
+      if (!data || data.team === '__cleared__') {
+        if (lastBuzz !== null) resetUI();
+        return;
+      }
+      if (data.team && data.team !== '__cleared__' && data.team !== lastBuzz) {
+        lastBuzz = data.team;
+        setLocked(data.team);
+      }
+    } catch(e) {}
+  }, 500);
+}
+
+/* ---- Touch handling (faster than click on mobile) ---- */
+const buzzBtn = document.getElementById('buzz-btn');
+buzzBtn.addEventListener('touchstart', e => { e.preventDefault(); buzz(); }, { passive: false });
+buzzBtn.addEventListener('click', buzz);
+</script>
+</body>
+</html>
